@@ -54,4 +54,35 @@ class TerminalBufferTest {
         assertEquals(3, buffer.getCursorColumn());
         assertEquals(0, buffer.getCursorRow());
     }
+
+    // Verifies insertion shifts content right and propagates overflow into following lines.
+    @Test
+    void insertTextShiftsAndWrapsAcrossLines() {
+        TerminalBuffer buffer = new TerminalBuffer(4, 2, 10);
+
+        buffer.writeText("abcd");
+        buffer.setCursorPosition(0, 1);
+        buffer.writeText("efgh");
+
+        buffer.setCursorPosition(2, 0);
+        buffer.insertText("Z");
+
+        assertEquals("abZc", buffer.getLineAsString(0));
+        assertEquals("defg", buffer.getLineAsString(1));
+        assertEquals(3, buffer.getCursorColumn());
+        assertEquals(0, buffer.getCursorRow());
+    }
+
+    // Verifies inserting at the last column advances cursor to the next line start.
+    @Test
+    void insertTextAtLineEndWrapsCursorToNextLine() {
+        TerminalBuffer buffer = new TerminalBuffer(3, 2, 10);
+        buffer.setCursorPosition(2, 0);
+
+        buffer.insertText("Q");
+
+        assertEquals("  Q", buffer.getLineAsString(0));
+        assertEquals(0, buffer.getCursorColumn());
+        assertEquals(1, buffer.getCursorRow());
+    }
 }

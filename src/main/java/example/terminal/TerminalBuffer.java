@@ -145,6 +145,29 @@ public class TerminalBuffer {
     }
 
     /**
+     * Inserts text at the cursor, shifting content right and wrapping overflow to following lines.
+     */
+    public void insertText(String text) {
+        Objects.requireNonNull(text, "text must not be null");
+        if (text.isEmpty()) {
+            return;
+        }
+
+        for (int offset = 0; offset < text.length(); ) {
+            int codePoint = text.codePointAt(offset);
+            offset += Character.charCount(codePoint);
+
+            if (codePoint == '\n') {
+                cursorColumn = 0;
+                advanceToNextLine();
+                continue;
+            }
+
+            insertCodePointAtCursor(codePoint);
+        }
+    }
+
+    /**
      * Accesses all buffer content using global row indexing:
      * [0..scrollbackSize-1] => scrollback, [scrollbackSize..] => screen.
      */
@@ -212,6 +235,66 @@ public class TerminalBuffer {
         return screen.get(globalRow - scrollback.size());
     }
 
+    private void insertCodePointAtCursor(int codePoint) {
+        Cell carry = Cell.fromCodePoint(codePoint, currentAttributes);
+
+        int row = cursorRow;
+        int col = cursorColumn;
+
+        while (carry != null) {
+            if (row >= height) {
+                scrollUpOneLine();
+                row = height - 1;
+            }
+
+            List<Cell> line = screen.get(row);
+            Cell nextCarry = line.get(width - 1);
+            shiftRight(line, col);
+            line.set(col, carry);
+
+            carry = isEmptyDefaultCell(nextCarry) ? null : nextCarry;
+            col = 0;
+            row++;
+        }
+
+        cursorColumn++;
+        if (cursorColumn >= width) {
+            cursorColumn = 0;
+            advanceToNextLine();
+        }
+    }
+
+    private void shiftRight(List<Cell> line, int fromColumn) {
+        for (int c = width - 1; c > fromColumn; c--) {
+            line.set(c, line.get(c - 1));
+        }
+    }
+
+    private void advanceToNextLine() {
+        if (cursorRow < height - 1) {
+            cursorRow++;
+        } else {
+            scrollUpOneLine();
+            cursorRow = height - 1;
+        }
+    }
+
+    private void addToScrollback(List<Cell> line) {
+        if (scrollbackMaxSize == 0) {
+            return;
+        }
+
+        scrollback.add(copyLine(line));
+        if (scrollback.size() > scrollbackMaxSize) {
+            scrollback.remove(0);
+        }
+    }
+
+    private void scrollUpOneLine() {
+        addToScrollback(screen.remove(0));
+        screen.add(createBlankLine());
+    }
+
     private void setCell(int row, int column, Cell cell) {
         screen.get(row).set(column, cell);
     }
@@ -222,6 +305,10 @@ public class TerminalBuffer {
             line.add(Cell.empty());
         }
         return line;
+    }
+
+    private List<Cell> copyLine(List<Cell> line) {
+        return new ArrayList<>(line);
     }
 
     private void moveCursorVertical(int delta) {
@@ -251,6 +338,10 @@ public class TerminalBuffer {
             builder.append(cell.character());
         }
         return builder.toString();
+    }
+
+    private boolean isEmptyDefaultCell(Cell cell) {
+        return " ".equals(cell.character()) && CellAttributes.DEFAULT.equals(cell.attributes());
     }
 
     private int clamp(int value, int min, int max) {
