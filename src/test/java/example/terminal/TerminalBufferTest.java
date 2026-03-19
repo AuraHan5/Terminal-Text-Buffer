@@ -40,4 +40,18 @@ class TerminalBufferTest {
         assertEquals(0, buffer.getCursorColumn());
         assertEquals(0, buffer.getCursorRow());
     }
+
+    // Verifies plain writes replace existing cells in place without shifting characters.
+    @Test
+    void writeTextOverwritesCurrentLineWithoutShifting() {
+        TerminalBuffer buffer = new TerminalBuffer(5, 2, 10);
+
+        buffer.writeText("abcde");
+        buffer.setCursorPosition(1, 0);
+        buffer.writeText("XY");
+
+        assertEquals("aXYde", buffer.getLineAsString(0));
+        assertEquals(3, buffer.getCursorColumn());
+        assertEquals(0, buffer.getCursorRow());
+    }
 }

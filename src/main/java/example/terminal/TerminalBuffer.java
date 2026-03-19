@@ -109,6 +109,42 @@ public class TerminalBuffer {
     }
 
     /**
+     * Overwrites text from the cursor on the current line without shifting existing cells.
+     */
+    public void writeText(String text) {
+        Objects.requireNonNull(text, "text must not be null");
+        if (text.isEmpty()) {
+            return;
+        }
+
+        int column = cursorColumn;
+        int lastWrittenColumn = cursorColumn;
+
+        for (int offset = 0; offset < text.length(); ) {
+            int codePoint = text.codePointAt(offset);
+            offset += Character.charCount(codePoint);
+
+            if (codePoint == '\n') {
+                cursorColumn = 0;
+                cursorRow = Math.min(cursorRow + 1, height - 1);
+                column = cursorColumn;
+                lastWrittenColumn = column;
+                continue;
+            }
+
+            if (column >= width) {
+                break;
+            }
+
+            setCell(cursorRow, column, Cell.fromCodePoint(codePoint, currentAttributes));
+            lastWrittenColumn = column;
+            column++;
+        }
+
+        cursorColumn = clamp(lastWrittenColumn + 1, 0, width - 1);
+    }
+
+    /**
      * Accesses all buffer content using global row indexing:
      * [0..scrollbackSize-1] => scrollback, [scrollbackSize..] => screen.
      */
