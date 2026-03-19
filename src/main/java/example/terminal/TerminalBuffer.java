@@ -179,6 +179,26 @@ public class TerminalBuffer {
         }
     }
 
+    public void insertEmptyLineAtBottom() {
+        addToScrollback(screen.remove(0));
+        screen.add(createBlankLine());
+        cursorRow = Math.max(0, Math.min(cursorRow, height - 1));
+        cursorColumn = Math.max(0, Math.min(cursorColumn, width - 1));
+    }
+
+    public void clearScreen() {
+        for (int i = 0; i < height; i++) {
+            screen.set(i, createBlankLine());
+        }
+        cursorColumn = 0;
+        cursorRow = 0;
+    }
+
+    public void clearScreenAndScrollback() {
+        clearScreen();
+        scrollback.clear();
+    }
+
     /**
      * Accesses all buffer content using global row indexing:
      * [0..scrollbackSize-1] => scrollback, [scrollbackSize..] => screen.

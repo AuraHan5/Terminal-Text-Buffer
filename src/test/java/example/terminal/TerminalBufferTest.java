@@ -101,4 +101,58 @@ class TerminalBufferTest {
         assertEquals(attrs, buffer.getAttributesAt(0, 1));
         assertEquals(attrs, buffer.getAttributesAt(3, 1));
     }
+
+    // Verifies adding a bottom line pushes the oldest visible line into scrollback.
+    @Test
+    void insertEmptyLineAtBottomMovesTopLineToScrollback() {
+        TerminalBuffer buffer = new TerminalBuffer(3, 2, 2);
+
+        buffer.writeText("AAA");
+        buffer.setCursorPosition(0, 1);
+        buffer.writeText("BBB");
+
+        buffer.insertEmptyLineAtBottom();
+
+        assertEquals(1, buffer.getScrollbackSize());
+        assertEquals("AAA", buffer.getLineAsString(0));
+        assertEquals("BBB", buffer.getLineAsString(1));
+        assertEquals("   ", buffer.getLineAsString(2));
+    }
+
+    // Verifies scrollback keeps only the most recent lines up to configured max size.
+    @Test
+    void scrollbackRespectsConfiguredMaximum() {
+        TerminalBuffer buffer = new TerminalBuffer(2, 1, 2);
+
+        buffer.writeText("11");
+        buffer.insertEmptyLineAtBottom();
+
+        buffer.writeText("22");
+        buffer.insertEmptyLineAtBottom();
+
+        buffer.writeText("33");
+        buffer.insertEmptyLineAtBottom();
+
+        assertEquals(2, buffer.getScrollbackSize());
+        assertEquals("22", buffer.getLineAsString(0));
+        assertEquals("33", buffer.getLineAsString(1));
+    }
+
+    // Verifies screen clear preserves scrollback, and full clear resets both regions.
+    @Test
+    void clearOperationsBehaveAsExpected() {
+        TerminalBuffer buffer = new TerminalBuffer(3, 2, 10);
+
+        buffer.writeText("abc");
+        buffer.insertEmptyLineAtBottom();
+        buffer.clearScreen();
+
+        assertEquals(1, buffer.getScrollbackSize());
+        assertEquals("   \n   ", buffer.getScreenContentAsString());
+
+        buffer.clearScreenAndScrollback();
+
+        assertEquals(0, buffer.getScrollbackSize());
+        assertEquals("   \n   ", buffer.getBufferContentAsString());
+    }
 }
