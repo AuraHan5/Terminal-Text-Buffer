@@ -155,4 +155,41 @@ class TerminalBufferTest {
         assertEquals(0, buffer.getScrollbackSize());
         assertEquals("   \n   ", buffer.getBufferContentAsString());
     }
+
+    // Verifies full buffer output includes scrollback history plus visible screen lines.
+    @Test
+    void getBufferContentIncludesScrollbackAndScreen() {
+        TerminalBuffer buffer = new TerminalBuffer(3, 2, 10);
+
+        buffer.writeText("abc");
+        buffer.setCursorPosition(0, 1);
+        buffer.writeText("def");
+        buffer.insertEmptyLineAtBottom();
+
+        assertEquals("abc\ndef\n   ", buffer.getBufferContentAsString());
+        assertEquals("def\n   ", buffer.getScreenContentAsString());
+    }
+
+    // Verifies newly inserted characters inherit the current cell attribute set.
+    @Test
+    void setCurrentAttributesAppliesToInsertedCharacters() {
+        TerminalBuffer buffer = new TerminalBuffer(3, 1, 10);
+
+        CellAttributes attrs = new CellAttributes(TerminalColor.GREEN, TerminalColor.BLACK, true, true, false);
+        buffer.setCurrentAttributes(attrs);
+        buffer.insertText("X");
+
+        assertEquals("X", buffer.getCharacterAt(0, 0));
+        assertEquals(attrs, buffer.getAttributesAt(0, 0));
+    }
+
+    // Verifies out-of-range coordinates and line indexes throw IndexOutOfBoundsException.
+    @Test
+    void invalidIndexesThrow() {
+        TerminalBuffer buffer = new TerminalBuffer(3, 2, 10);
+
+        assertThrows(IndexOutOfBoundsException.class, () -> buffer.getCharacterAt(-1, 0));
+        assertThrows(IndexOutOfBoundsException.class, () -> buffer.getCharacterAt(0, -1));
+        assertThrows(IndexOutOfBoundsException.class, () -> buffer.fillLine(2, "x"));
+    }
 }

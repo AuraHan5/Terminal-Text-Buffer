@@ -311,6 +311,11 @@ public class TerminalBuffer {
         }
     }
 
+    private void scrollUpOneLine() {
+        addToScrollback(screen.remove(0));
+        screen.add(createBlankLine());
+    }
+
     private void addToScrollback(List<Cell> line) {
         if (scrollbackMaxSize == 0) {
             return;
@@ -320,11 +325,6 @@ public class TerminalBuffer {
         if (scrollback.size() > scrollbackMaxSize) {
             scrollback.remove(0);
         }
-    }
-
-    private void scrollUpOneLine() {
-        addToScrollback(screen.remove(0));
-        screen.add(createBlankLine());
     }
 
     private void setCell(int row, int column, Cell cell) {
