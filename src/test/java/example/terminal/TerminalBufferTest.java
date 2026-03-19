@@ -2,7 +2,9 @@ package example.terminal;
 
 import org.junit.jupiter.api.Test;
 
+import src.main.java.example.terminal.CellAttributes;
 import src.main.java.example.terminal.TerminalBuffer;
+import src.main.java.example.terminal.TerminalColor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -84,5 +86,19 @@ class TerminalBufferTest {
         assertEquals("  Q", buffer.getLineAsString(0));
         assertEquals(0, buffer.getCursorColumn());
         assertEquals(1, buffer.getCursorRow());
+    }
+
+    // Verifies filling a line writes characters with the currently active attributes.
+    @Test
+    void fillLineUsesCurrentAttributes() {
+        TerminalBuffer buffer = new TerminalBuffer(4, 2, 10);
+        CellAttributes attrs = new CellAttributes(TerminalColor.RED, TerminalColor.BLUE, true, false, true);
+        buffer.setCurrentAttributes(attrs);
+
+        buffer.fillLine(1, "*");
+
+        assertEquals("****", buffer.getLineAsString(1));
+        assertEquals(attrs, buffer.getAttributesAt(0, 1));
+        assertEquals(attrs, buffer.getAttributesAt(3, 1));
     }
 }

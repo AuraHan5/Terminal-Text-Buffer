@@ -167,6 +167,18 @@ public class TerminalBuffer {
         }
     }
 
+    public void fillLine(int screenRow, String character) {
+        if (screenRow < 0 || screenRow >= height) {
+            throw new IndexOutOfBoundsException("screenRow out of bounds");
+        }
+
+        String fill = normalizeFillCharacter(character);
+        List<Cell> line = screen.get(screenRow);
+        for (int c = 0; c < width; c++) {
+            line.set(c, new Cell(fill, currentAttributes));
+        }
+    }
+
     /**
      * Accesses all buffer content using global row indexing:
      * [0..scrollbackSize-1] => scrollback, [scrollbackSize..] => screen.
@@ -338,6 +350,16 @@ public class TerminalBuffer {
             builder.append(cell.character());
         }
         return builder.toString();
+    }
+
+    private String normalizeFillCharacter(String character) {
+        if (character == null || character.isEmpty()) {
+            return " ";
+        }
+        if (character.codePointCount(0, character.length()) != 1) {
+            throw new IllegalArgumentException("fill character must contain at most one Unicode code point");
+        }
+        return character;
     }
 
     private boolean isEmptyDefaultCell(Cell cell) {
