@@ -1,7 +1,9 @@
 package example.terminal;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Core terminal text buffer that stores screen lines and immutable scrollback history.
@@ -67,11 +69,155 @@ public class TerminalBuffer {
         return cursorRow;
     }
 
+    public void setCursorPosition(int column, int row) {
+        this.cursorColumn = clamp(column, 0, width - 1);
+        this.cursorRow = clamp(row, 0, height - 1);
+    }
+
+    public void moveCursorUp(int cells) {
+        moveCursorVertical(-cells);
+    }
+
+    public void moveCursorDown(int cells) {
+        moveCursorVertical(cells);
+    }
+
+    public void moveCursorLeft(int cells) {
+        moveCursorHorizontal(-cells);
+    }
+
+    public void moveCursorRight(int cells) {
+        moveCursorHorizontal(cells);
+    }
+
+    public CellAttributes getCurrentAttributes() {
+        return currentAttributes;
+    }
+
+    public void setCurrentAttributes(CellAttributes attributes) {
+        this.currentAttributes = Objects.requireNonNull(attributes, "attributes must not be null");
+    }
+
+    public void setCurrentAttributes(
+            TerminalColor foreground,
+            TerminalColor background,
+            boolean bold,
+            boolean italic,
+            boolean underline
+    ) {
+        this.currentAttributes = new CellAttributes(foreground, background, bold, italic, underline);
+    }
+
+    /**
+     * Accesses all buffer content using global row indexing:
+     * [0..scrollbackSize-1] => scrollback, [scrollbackSize..] => screen.
+     */
+    public String getCharacterAt(int column, int globalRow) {
+        Cell cell = getCellAt(column, globalRow);
+        return cell.character();
+    }
+
+    public CellAttributes getAttributesAt(int column, int globalRow) {
+        Cell cell = getCellAt(column, globalRow);
+        return cell.attributes();
+    }
+
+    public String getLineAsString(int globalRow) {
+        List<Cell> line = getLineByGlobalRow(globalRow);
+        return lineToString(line);
+    }
+
+    public String getScreenContentAsString() {
+        return joinLines(screen);
+    }
+
+    public String getBufferContentAsString() {
+        List<List<Cell>> combined = new ArrayList<>(scrollback.size() + screen.size());
+        combined.addAll(scrollback);
+        combined.addAll(screen);
+        return joinLines(combined);
+    }
+
+    public List<String> getScreenLines() {
+        List<String> lines = new ArrayList<>(height);
+        for (List<Cell> line : screen) {
+            lines.add(lineToString(line));
+        }
+        return Collections.unmodifiableList(lines);
+    }
+
+    public List<String> getScrollbackLines() {
+        List<String> lines = new ArrayList<>(scrollback.size());
+        for (List<Cell> line : scrollback) {
+            lines.add(lineToString(line));
+        }
+        return Collections.unmodifiableList(lines);
+    }
+
+    private Cell getCellAt(int column, int globalRow) {
+        if (column < 0 || column >= width) {
+            throw new IndexOutOfBoundsException("column out of bounds");
+        }
+
+        List<Cell> line = getLineByGlobalRow(globalRow);
+        return line.get(column);
+    }
+
+    private List<Cell> getLineByGlobalRow(int globalRow) {
+        int totalLines = scrollback.size() + screen.size();
+        if (globalRow < 0 || globalRow >= totalLines) {
+            throw new IndexOutOfBoundsException("globalRow out of bounds");
+        }
+
+        if (globalRow < scrollback.size()) {
+            return scrollback.get(globalRow);
+        }
+
+        return screen.get(globalRow - scrollback.size());
+    }
+
+    private void setCell(int row, int column, Cell cell) {
+        screen.get(row).set(column, cell);
+    }
+
     private List<Cell> createBlankLine() {
         List<Cell> line = new ArrayList<>(width);
         for (int i = 0; i < width; i++) {
             line.add(Cell.empty());
         }
         return line;
+    }
+
+    private void moveCursorVertical(int delta) {
+        int next = cursorRow + Math.max(0, Math.abs(delta)) * Integer.signum(delta);
+        cursorRow = clamp(next, 0, height - 1);
+    }
+
+    private void moveCursorHorizontal(int delta) {
+        int next = cursorColumn + Math.max(0, Math.abs(delta)) * Integer.signum(delta);
+        cursorColumn = clamp(next, 0, width - 1);
+    }
+
+    private String joinLines(List<List<Cell>> lines) {
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < lines.size(); i++) {
+            builder.append(lineToString(lines.get(i)));
+            if (i < lines.size() - 1) {
+                builder.append('\n');
+            }
+        }
+        return builder.toString();
+    }
+
+    private String lineToString(List<Cell> line) {
+        StringBuilder builder = new StringBuilder(width);
+        for (Cell cell : line) {
+            builder.append(cell.character());
+        }
+        return builder.toString();
+    }
+
+    private int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
     }
 }
