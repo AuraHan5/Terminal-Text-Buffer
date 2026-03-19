@@ -2,10 +2,6 @@ package example.terminal;
 
 import org.junit.jupiter.api.Test;
 
-import src.main.java.example.terminal.CellAttributes;
-import src.main.java.example.terminal.TerminalBuffer;
-import src.main.java.example.terminal.TerminalColor;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -124,12 +120,15 @@ class TerminalBufferTest {
     void scrollbackRespectsConfiguredMaximum() {
         TerminalBuffer buffer = new TerminalBuffer(2, 1, 2);
 
+        buffer.setCursorPosition(0, 0);
         buffer.writeText("11");
         buffer.insertEmptyLineAtBottom();
 
+        buffer.setCursorPosition(0, 0);
         buffer.writeText("22");
         buffer.insertEmptyLineAtBottom();
 
+        buffer.setCursorPosition(0, 0);
         buffer.writeText("33");
         buffer.insertEmptyLineAtBottom();
 
